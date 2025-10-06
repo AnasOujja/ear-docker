@@ -1,0 +1,150 @@
+x-build-args: &build_args
+  IMAGE_TAG: ${IMAGE_TAG}
+  SLURM_TAG: ${SLURM_TAG}
+  EAR_TAG: ${EAR_TAG}
+
+services:
+  mysql:
+    image: mariadb:10.11
+    hostname: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+    volumes:
+      - var_lib_mysql:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    networks: [slurm-network]
+    expose: ["3306"]
+
+  # Build the base and do not run it
+  base:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+      args: *build_args
+    image: slurm-ear-base:${IMAGE_TAG}
+    deploy:
+      replicas: 0
+
+  slurmdbd:
+    build:
+      context: .
+      dockerfile: Dockerfile.slurmdbd
+      args: *build_args
+    image: slurm-ear-slurmdbd:${IMAGE_TAG}
+    container_name: slurmdbd
+    hostname: slurmdbd
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - var_log_slurm:/var/log/slurm
+    expose: ["6819"]
+    networks: [slurm-network]
+
+  slurmctld:
+    build:
+      context: .
+      dockerfile: Dockerfile.controller
+      args: *build_args
+    image: slurm-ear-controller:${IMAGE_TAG}
+    container_name: slurmctld
+    hostname: slurmctld
+    environment:
+      EAR_ETC: /etc
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - etc_ear:/etc/ear
+      - var_log_ear:/var/log/ear
+    expose: ["6817"]
+    networks: [slurm-network]
+
+  c1:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+      args: *build_args
+    image: slurm-ear-node:${IMAGE_TAG}
+    hostname: c1
+    environment:
+      EAR_ETC: /etc
+    container_name: c1
+    privileged: true
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - etc_ear:/etc/ear
+      - var_log_ear:/var/log/ear
+    expose: ["6818", "5000"]
+    networks: [slurm-network]
+
+  c2:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+      args: *build_args
+    image: slurm-ear-node:${IMAGE_TAG}
+    hostname: c2
+    environment:
+      EAR_ETC: /etc
+    container_name: c2
+    privileged: true
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - etc_ear:/etc/ear
+      - var_log_ear:/var/log/ear
+    expose: ["6818", "5000"]
+    networks: [slurm-network]
+
+  # EAR database manager
+  eardbd:
+    build:
+      context: .
+      dockerfile: Dockerfile.eardbd
+      args: *build_args
+    image: slurm-ear-eardbd:${IMAGE_TAG}
+    container_name: eardbd
+    hostname: eardbd
+    environment:
+      EAR_ETC: /etc
+    volumes:
+      - etc_ear:/etc/ear
+      - var_log_ear:/var/log/ear
+    expose: ["4711"]
+    networks: [slurm-network]
+
+  # EAR global manager
+  eargm:
+    build:
+      context: .
+      dockerfile: Dockerfile.eargm
+      args: *build_args
+    image: slurm-ear-eargm:${IMAGE_TAG}
+    container_name: eargm
+    hostname: eargm
+    environment:
+      EAR_ETC: /etc
+    volumes:
+      - etc_ear:/etc/ear
+      - var_log_ear:/var/log/ear
+    expose: ["50000"]
+    networks: [slurm-network]
+
+volumes:
+  etc_munge:
+  etc_slurm:
+  slurm_jobdir:
+  var_lib_mysql:
+  var_log_slurm:
+  etc_ear:
+  var_log_ear:
+
+networks:
+  slurm-network:
+    driver: bridge

@@ -1,0 +1,5 @@
+ARG IMAGE_TAG=latest
+FROM slurm-ear-base:${IMAGE_TAG}
+COPY entrypoints/entrypoint-slurmdbd.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

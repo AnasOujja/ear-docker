@@ -1,0 +1,8 @@
+ARG IMAGE_TAG=latest
+FROM slurm-ear-base:${IMAGE_TAG}
+ARG EAR_TAG
+RUN set -x \
+    && pushd /tmp/EAR-EAR_${EAR_TAG} && make eardbd.install && popd && rm -rf /tmp/EAR-EAR_${EAR_TAG}
+COPY entrypoints/entrypoint-eardbd.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

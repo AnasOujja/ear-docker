@@ -1,0 +1,117 @@
+FROM rockylinux:8
+
+RUN set -ex \
+    && yum makecache \
+    && yum -y update \
+    && yum -y install dnf-plugins-core \
+    && yum config-manager --set-enabled powertools \
+    && yum -y groupinstall "Development Tools" \
+    && yum -y install \
+       wget \
+       gnupg \
+       python3-devel \
+       python3-pip \
+       python3 \
+       mariadb-devel \
+       mariadb \
+       psmisc \
+       munge \
+       munge-devel \
+       bash-completion \
+       vim-enhanced \
+       http-parser-devel \
+       json-c-devel \
+       unzip \
+       papi papi-devel \
+       gsl gsl-devel \
+       kernel-tools kernel-tools-libs \
+       freeipmi freeipmi-devel ipmitool\
+       openmpi openmpi-devel \
+    && yum clean all && rm -rf /var/cache/yum
+
+RUN alternatives --set python /usr/bin/python3 \
+    && pip3 install --no-cache-dir Cython pytest
+
+# ---------- GOSU ----------
+ARG GOSU_VERSION=1.17
+
+RUN set -ex \
+    && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" \
+    && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64.asc" \
+    && export GNUPGHOME="$(mktemp -d)" \
+    && gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
+    && gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
+    && rm -rf "${GNUPGHOME}" /usr/local/bin/gosu.asc \
+    && chmod +x /usr/local/bin/gosu \
+    && gosu nobody true
+
+# ---------- SLURM ----------
+ARG SLURM_TAG
+RUN set -x \
+    && git clone -b ${SLURM_TAG} --single-branch --depth=1 https://github.com/SchedMD/slurm.git \
+    && pushd slurm \
+    && ./configure --enable-debug --prefix=/usr --sysconfdir=/etc/slurm \
+        --with-mysql_config=/usr/bin  --libdir=/usr/lib64 \
+    && make -j"$(nproc)" install \
+    && install -D -m644 etc/cgroup.conf.example /etc/slurm/cgroup.conf.example \
+    && install -D -m644 etc/slurm.conf.example /etc/slurm/slurm.conf.example \
+    && install -D -m644 etc/slurmdbd.conf.example /etc/slurm/slurmdbd.conf.example \
+    && install -D -m644 contribs/slurm_completion_help/slurm_completion.sh /etc/profile.d/slurm_completion.sh \
+    && popd && rm -rf slurm \
+    && groupadd -r --gid=990 slurm \
+    && useradd -r -g slurm --uid=990 slurm \
+    && mkdir -p /etc/sysconfig/slurm /var/spool/slurmd /var/run/slurmd /var/run/slurmdbd \
+              /var/lib/slurmd /var/log/slurm /data \
+    && touch /var/lib/slurmd/node_state /var/lib/slurmd/front_end_state \
+             /var/lib/slurmd/job_state /var/lib/slurmd/resv_state /var/lib/slurmd/trigger_state \
+             /var/lib/slurmd/assoc_mgr_state /var/lib/slurmd/assoc_usage /var/lib/slurmd/qos_usage \
+             /var/lib/slurmd/fed_mgr_state \
+    && chown -R slurm:slurm /var/*/slurm*
+
+# ---------- EAR ----------
+ARG EAR_TAG
+
+ENV EAR_PREFIX=/usr
+ENV EAR_ETC=/etc/ear
+ENV EAR_TMP=/var/ear
+
+RUN set -x \
+    #git clone doesnt download the right format (ASCII text instead of zip file)
+    && curl -L -o /tmp/ear.zip "https://github.com/eas4dc/EAR/archive/refs/tags/EAR_${EAR_TAG}.zip" \
+    && unzip /tmp/ear.zip -d /tmp \
+    && pushd /tmp/EAR-EAR_${EAR_TAG} \
+    && autoreconf -i \
+    && CC=gcc MPICC=/usr/lib64/openmpi/bin/mpicc \
+    USER=ear GROUP=ear \
+    ./configure \
+        --prefix=${EAR_PREFIX} \
+        --sysconfdir=${EAR_ETC} \
+        --with-papi=/usr \
+        --with-mysql=/usr \
+        --with-slurm=/usr \
+    && groupadd -r ear && useradd -r -g ear ear \
+    && mkdir -p /var/ear /etc/ear/coeffs /var/log/ear \
+    && chown -R ear:ear /var/ear /var/log/ear \
+    && chown -R root:ear /etc/ear \
+    && chmod 775 /var/ear /var/log/ear \
+    && chmod 777 /etc/ear /etc/ear/coeffs \
+    && make && make etc.install && make check \
+    && rm -rf /tmp/ear.zip   
+
+# Configs copied at build-time (can be overridden by volumes)
+COPY ./etc-slurm/slurm.conf /etc/slurm/slurm.conf
+COPY ./etc-slurm/slurmdbd.conf /etc/slurm/slurmdbd.conf
+COPY ./etc-slurm/plugstack.conf /etc/slurm/plugstack.conf
+COPY ./etc-ear/ear.conf ${EAR_ETC}/ear.conf
+COPY ./munge.key /etc/munge/munge.key
+
+RUN set -x \
+  && chown slurm:slurm /etc/slurm/slurmdbd.conf \
+  && chmod 600 /etc/slurm/slurmdbd.conf \
+  && chmod 666 /etc/ear/ear.conf \
+  && chown munge:munge /etc/munge/munge.key \
+  && chmod 400 /etc/munge/munge.key
+
+# Common helper used by role images
+COPY entrypoints/common-wait.sh /usr/local/bin/common-wait.sh
+RUN chmod +x /usr/local/bin/common-wait.sh
