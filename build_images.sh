@@ -2,10 +2,12 @@
 
 set -e
 
-yum -y install munge
+# Comment lines below if munge is installed and key already generated and copied to the working folder
 
-#/sbin/mungekey
-#cp /etc/munge/munge.key ./munge.key
+apt -y install munge
+
+/sbin/mungekey
+cp /etc/munge/munge.key ./munge.key
 
 docker compose build base
 docker compose build

@@ -81,9 +81,10 @@ RUN set -x \
     && unzip /tmp/ear.zip -d /tmp \
     && pushd /tmp/EAR-EAR_${EAR_TAG} \
     && autoreconf -i \
+    # University's workstation CPU does not support AVX512. Thus, we will disable it using the provided flag in order to use AVX2 instead (Found in the Changelog).
     && CC=gcc MPICC=/usr/lib64/openmpi/bin/mpicc \
     USER=ear GROUP=ear \
-    ./configure \
+    ./configure --disable-avx512 \
         --prefix=${EAR_PREFIX} \
         --sysconfdir=${EAR_ETC} \
         --with-papi=/usr \
@@ -93,7 +94,7 @@ RUN set -x \
     && mkdir -p /var/ear /etc/ear/coeffs /var/log/ear \
     && chown -R ear:ear /var/ear /var/log/ear \
     && chown -R root:ear /etc/ear \
-    && chmod 775 /var/ear /var/log/ear \
+    && chmod 777 /var/ear /var/log/ear \
     && chmod 777 /etc/ear /etc/ear/coeffs \
     && make && make etc.install && make check \
     && rm -rf /tmp/ear.zip   
@@ -102,13 +103,13 @@ RUN set -x \
 COPY ./etc-slurm/slurm.conf /etc/slurm/slurm.conf
 COPY ./etc-slurm/slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY ./etc-slurm/plugstack.conf /etc/slurm/plugstack.conf
-COPY ./etc-ear/ear.conf ${EAR_ETC}/ear.conf
+COPY ./etc-ear/ear.conf ${EAR_ETC}/ear/ear.conf
 COPY ./munge.key /etc/munge/munge.key
 
 RUN set -x \
   && chown slurm:slurm /etc/slurm/slurmdbd.conf \
   && chmod 600 /etc/slurm/slurmdbd.conf \
-  && chmod 666 /etc/ear/ear.conf \
+  && chmod 666 ${EAR_ETC}/ear/ear.conf \
   && chown munge:munge /etc/munge/munge.key \
   && chmod 400 /etc/munge/munge.key
 

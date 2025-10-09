@@ -10,3 +10,9 @@ wait_for_tcp eardbd 4711 "eardbd"
 
 echo "---> Starting slurmd ..."
 exec /usr/sbin/slurmd -Dvvv
+
+#echo "---> Dummy coefficients ..."
+#exec /bin/tools/coeffs_null
+
+#echo "---> Starting eard ..."
+#exec /usr/sbin/eard -Dvvv
