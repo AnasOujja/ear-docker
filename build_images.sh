@@ -2,7 +2,7 @@
 
 set -e
 
-# Comment lines below if munge is installed and key already generated and copied to the working folder
+# Uncomment lines below if munge is not installed and key not yet generated and copied to the working folder
 
 apt -y install munge
 

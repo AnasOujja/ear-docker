@@ -17,4 +17,4 @@ done
 echo "-- Slurm_Accounting_DB ready for use"
 
 echo "---> Starting slurmdbd ..."
-exec gosu slurm /usr/sbin/slurmdbd -Dvvv
+gosu slurm /usr/sbin/slurmdbd -Dvvv

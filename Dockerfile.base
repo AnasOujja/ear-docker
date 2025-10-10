@@ -73,7 +73,7 @@ ARG EAR_TAG
 
 ENV EAR_PREFIX=/usr
 ENV EAR_ETC=/etc/ear
-ENV EAR_TMP=/var/ear
+ENV EAR_TMP=/var/log/ear
 
 RUN set -x \
     #git clone doesnt download the right format (ASCII text instead of zip file)
@@ -91,10 +91,10 @@ RUN set -x \
         --with-mysql=/usr \
         --with-slurm=/usr \
     && groupadd -r ear && useradd -r -g ear ear \
-    && mkdir -p /var/ear /etc/ear/coeffs /var/log/ear \
-    && chown -R ear:ear /var/ear /var/log/ear \
+    && mkdir -p /etc/ear/coeffs /var/log/ear \
+    && chown -R ear:ear /var/log/ear \
     && chown -R root:ear /etc/ear \
-    && chmod 777 /var/ear /var/log/ear \
+    && chmod 777 /var/log/ear \
     && chmod 777 /etc/ear /etc/ear/coeffs \
     && make && make etc.install && make check \
     && rm -rf /tmp/ear.zip   
