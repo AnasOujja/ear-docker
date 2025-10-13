@@ -79,9 +79,12 @@ RUN set -x \
     #git clone doesnt download the right format (ASCII text instead of zip file)
     && curl -L -o /tmp/ear.zip "https://github.com/eas4dc/EAR/archive/refs/tags/EAR_${EAR_TAG}.zip" \
     && unzip /tmp/ear.zip -d /tmp \
-    && rm /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c
+    && rm /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c \
+    && rm /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/frequency.c
 
-COPY hardware_info.c /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c
+COPY ./overrides/hardware_info.c /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c
+COPY ./overrides/frequency.c /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/frequency.c
+
 COPY ./topo/thread_siblings /tmp/thread_siblings
 COPY ./topo/core_siblings /tmp/core_siblings
 
