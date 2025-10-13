@@ -73,12 +73,19 @@ ARG EAR_TAG
 
 ENV EAR_PREFIX=/usr
 ENV EAR_ETC=/etc/ear
-ENV EAR_TMP=/var/log/ear
+ENV EAR_TMP=/var/ear
 
 RUN set -x \
     #git clone doesnt download the right format (ASCII text instead of zip file)
     && curl -L -o /tmp/ear.zip "https://github.com/eas4dc/EAR/archive/refs/tags/EAR_${EAR_TAG}.zip" \
     && unzip /tmp/ear.zip -d /tmp \
+    && rm /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c
+
+COPY hardware_info.c /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c
+COPY ./topo/thread_siblings /tmp/thread_siblings
+COPY ./topo/core_siblings /tmp/core_siblings
+
+RUN set -x \
     && pushd /tmp/EAR-EAR_${EAR_TAG} \
     && autoreconf -i \
     # University's workstation CPU does not support AVX512. Thus, we will disable it using the provided flag in order to use AVX2 instead (Found in the Changelog).
@@ -99,11 +106,17 @@ RUN set -x \
     && make && make etc.install && make check \
     && rm -rf /tmp/ear.zip   
 
-# Configs copied at build-time (can be overridden by volumes)
+# Slurm configs
 COPY ./etc-slurm/slurm.conf /etc/slurm/slurm.conf
 COPY ./etc-slurm/slurmdbd.conf /etc/slurm/slurmdbd.conf
+
+# plugstack.conf in login node and compute nodes
 COPY ./etc-slurm/plugstack.conf /etc/slurm/plugstack.conf
+
+# ear.conf is shared between all ear components
 COPY ./etc-ear/ear.conf ${EAR_ETC}/ear/ear.conf
+
+# Authentication for slurm communication
 COPY ./munge.key /etc/munge/munge.key
 
 RUN set -x \
