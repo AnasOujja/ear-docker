@@ -148,8 +148,6 @@ state_t hardware_gettopology(topology_t *topo)
 		sprintf(path, PATH_SYS_SYSTEM "/cpu/cpu%d", aux1);
 	} while(file_is_accessible(path));
 
-    printf("Number of CPUs = %d\n", aux1);
-
 	/* Number of threads per core */
 	if (file_is_accessible("/tmp/thread_siblings")) {
 		s = hardware_sibling_read("/tmp/thread_siblings", &topo->threads);
@@ -186,14 +184,10 @@ state_t hardware_gettopology(topology_t *topo)
 		aux2 = aux1;
 	}
 
-    printf("Number of CPUs per numa node = %d\n", aux2);
-
 	/* Number of sockets */
 	if (topo->threads > 0 && topo->cores > 0) {
 		topo->sockets = aux2 / topo->cores / topo->threads;
 	}
-
-    printf("Number of sockets = %d\n", topo->sockets);
 
 	return EAR_SUCCESS;
 }
