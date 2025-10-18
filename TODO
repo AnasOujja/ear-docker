@@ -1,1 +1,1 @@
-Expose Hardware to compute nodes and compute coeffs
+Disable intel_pstate so the kernel is forced to load acpi_cpufreq instead

@@ -66,7 +66,8 @@ services:
     image: slurm-ear-node:${IMAGE_TAG}
     hostname: c1
     container_name: c1
-    privileged: true
+    privileged: false
+    cpuset: "0,1"
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
@@ -85,7 +86,8 @@ services:
     image: slurm-ear-node:${IMAGE_TAG}
     hostname: c2
     container_name: c2
-    privileged: true
+    cpuset: "2,3"
+    privileged: false
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm

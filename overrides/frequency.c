@@ -186,6 +186,8 @@ int frequency_init(unsigned int _num_cpus)
     char driver[128],my_gov[128];
     CPUfreq_get_cpufreq_driver(0,driver);
     debug("Current cpufreq driver is %s",driver);
+
+    // Modified to include intel_cpufreq
     if (strcmp(driver,"acpi-cpufreq") && strcmp(driver,"intel_cpufreq")){
         error("Invalid cpufreq driver %s, please, install %s",driver,"acpi-cpufreq");
         exit(0);
