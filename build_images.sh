@@ -4,9 +4,9 @@ set -e
 
 # Uncomment lines below if munge is not installed and key not yet generated and copied to the working folder
 
-#apt -y install munge
+apt -y install munge
 
-#/sbin/mungekey
+/sbin/mungekey
 cp /etc/munge/munge.key ./munge.key
 
 cp /sys/devices/system/cpu/cpu0/topology/thread_siblings ./topo/thread_siblings

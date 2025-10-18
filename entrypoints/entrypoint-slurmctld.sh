@@ -8,7 +8,7 @@ gosu munge /usr/sbin/munged
 wait_for_tcp slurmdbd 6819 "slurmdbd"
 
 sleep 10
-#/usr/bin/sacctmgr -i --immediate add cluster name=linux
+/usr/bin/sacctmgr -i --immediate add cluster name=linux
 
 echo "---> Starting slurmctld ..."
 if /usr/sbin/slurmctld -V | grep -q '17.02' ; then
