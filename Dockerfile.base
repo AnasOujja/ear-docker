@@ -8,29 +8,15 @@ RUN set -ex \
     && yum -y groupinstall "Development Tools" \
     && yum -y install \
        wget \
-       gnupg \
-       python3-devel \
-       python3-pip \
-       python3 \
-       mariadb-devel \
-       mariadb \
-       psmisc \
-       munge \
-       munge-devel \
-       bash-completion \
-       vim-enhanced \
-       http-parser-devel \
-       json-c-devel \
        unzip \
+       mariadb mariadb-devel \
+       munge munge-devel \
        papi papi-devel \
        gsl gsl-devel \
-       kernel-tools kernel-tools-libs \
-       freeipmi freeipmi-devel ipmitool\
+       hwloc hwloc-devel \
+       libevent libevent-devel \
        openmpi openmpi-devel \
     && yum clean all && rm -rf /var/cache/yum
-
-RUN alternatives --set python /usr/bin/python3 \
-    && pip3 install --no-cache-dir Cython pytest
 
 # ---------- GOSU ----------
 ARG GOSU_VERSION=1.17
@@ -76,59 +62,52 @@ ENV EAR_ETC=/etc/ear
 ENV EAR_TMP=/var/ear
 
 RUN set -x \
-    #git clone doesnt download the right format (ASCII text instead of zip file)
     && curl -L -o /tmp/ear.zip "https://github.com/eas4dc/EAR/archive/refs/tags/EAR_${EAR_TAG}.zip" \
     && unzip /tmp/ear.zip -d /tmp \
     && rm /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c \
-    && rm /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/frequency.c
+    && rm /tmp/EAR-EAR_${EAR_TAG}/src/metrics/energy/energy_node.c
 
 COPY ./overrides/hardware_info.c /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/hardware_info.c
-COPY ./overrides/frequency.c /tmp/EAR-EAR_${EAR_TAG}/src/common/hardware/frequency.c
+COPY ./overrides/energy_node.c /tmp/EAR-EAR_${EAR_TAG}/src/metrics/energy/energy_node.c
 
 COPY ./topo/thread_siblings /tmp/thread_siblings
 COPY ./topo/core_siblings /tmp/core_siblings
 
 RUN set -x \
     && pushd /tmp/EAR-EAR_${EAR_TAG} \
+    && groupadd -r ear && useradd -r -g ear ear \
     && autoreconf -i \
-    # University's workstation CPU does not support AVX512. Thus, we will disable it using the provided flag in order to use AVX2 instead (Found in the Changelog).
     && CC=gcc MPICC=/usr/lib64/openmpi/bin/mpicc \
     USER=ear GROUP=ear \
     ./configure --disable-avx512 \
         --prefix=${EAR_PREFIX} \
         --sysconfdir=${EAR_ETC} \
+        --localstatedir=${EAR_TMP} \
         --with-papi=/usr \
         --with-mysql=/usr \
         --with-slurm=/usr \
-    && groupadd -r ear && useradd -r -g ear ear \
-    && mkdir -p /etc/ear/coeffs /var/log/ear \
-    && chown -R ear:ear /var/log/ear \
-    && chown -R root:ear /etc/ear \
-    && chmod 777 /var/log/ear \
-    && chmod 777 /etc/ear /etc/ear/coeffs \
-    && make && make etc.install && make check \
-    && rm -rf /tmp/ear.zip   
+    && mkdir -p /etc/ear/coeffs /var/ear \
+    && chown -R ear:ear /etc/ear /var/ear \
+    && make && make etc.install \
+    && rm -rf /tmp/ear.zip
 
-# Slurm configs
+# Configuration files
 COPY ./etc-slurm/slurm.conf /etc/slurm/slurm.conf
 COPY ./etc-slurm/slurmdbd.conf /etc/slurm/slurmdbd.conf
-
-# plugstack.conf in login node and compute nodes
 COPY ./etc-slurm/plugstack.conf /etc/slurm/plugstack.conf
-
-# ear.conf is shared between all ear components
 COPY ./etc-ear/ear.conf ${EAR_ETC}/ear/ear.conf
 
 # Authentication for slurm communication
 COPY ./munge.key /etc/munge/munge.key
 
 RUN set -x \
-  && chown slurm:slurm /etc/slurm/slurmdbd.conf \
-  && chmod 600 /etc/slurm/slurmdbd.conf \
-  && chmod 666 ${EAR_ETC}/ear/ear.conf \
+  && chown slurm:slurm /etc/slurm/slurm*.conf \
+  && chmod 600 /etc/slurm/slurm*.conf \
+  && chown ear:ear ${EAR_ETC}/ear/ear.conf \
+  && chmod 400 ${EAR_ETC}/ear/ear.conf \
   && chown munge:munge /etc/munge/munge.key \
   && chmod 400 /etc/munge/munge.key
 
-# Common helper used by role images
+# Common helper
 COPY entrypoints/common-wait.sh /usr/local/bin/common-wait.sh
 RUN chmod +x /usr/local/bin/common-wait.sh

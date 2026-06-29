@@ -1,1 +1,25 @@
-Disable intel_pstate so the kernel is forced to load acpi_cpufreq instead
+# ---------- PMIx ----------
+RUN set -x \
+    && git clone https://github.com/openpmix/openpmix \
+    && pushd openpmix \
+    && git submodule update --init \
+    && ./autogen.pl \
+    && ./configure --prefix=/usr \
+    && make all install \
+    && popd \
+    && rm -rf openpmix
+
+# ---------- OpenMPI ----------
+RUN set -x \
+    && wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.9.tar.gz \
+    && tar -xvf openmpi-5.0.9.tar.gz \
+    && pushd openmpi-5.0.9 \
+    && ./configure --with-slurm --with-pmix --prefix=/usr \
+    && make -j"$(nproc)" \
+    && make install \
+    && export PATH="$PATH:/usr/bin" \
+    && export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib/" \
+    && echo export PATH="$PATH:/usr/bin" >> /root/.bashrc \
+    && echo export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib/" >> /root/.bashrc \
+    && popd \
+    && rm -rf openmpi-5.0.9

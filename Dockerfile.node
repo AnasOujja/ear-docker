@@ -2,7 +2,8 @@ ARG IMAGE_TAG=latest
 FROM slurm-ear-base:${IMAGE_TAG}
 ARG EAR_TAG
 RUN set -x \
-    && pushd /tmp/EAR-EAR_${EAR_TAG} && make install && make eard.install && make earl.install && popd && rm -rf /tmp/EAR-EAR_${EAR_TAG}
+    && pushd /tmp/EAR-EAR_${EAR_TAG} && make install && make eard.install && make earl.install && popd && rm -rf /tmp/EAR-EAR_${EAR_TAG} \
+    && chown root:root /usr/sbin/eard
 COPY entrypoints/entrypoint-node.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

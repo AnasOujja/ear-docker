@@ -5,7 +5,9 @@ x-build-args: &build_args
 
 services:
   mysql:
-    image: mariadb:10.11
+    image: mariadb:10.3.39
+    container_name: mysql
+    cpuset: "1"
     hostname: mysql
     environment:
       MYSQL_ROOT_PASSWORD: rootpw
@@ -15,7 +17,6 @@ services:
     networks: [slurm-network]
     expose: ["3306"]
 
-  # Build the base and do not run it
   base:
     build:
       context: .
@@ -32,6 +33,7 @@ services:
       args: *build_args
     image: slurm-ear-slurmdbd:${IMAGE_TAG}
     container_name: slurmdbd
+    cpuset: "2"
     hostname: slurmdbd
     volumes:
       - etc_munge:/etc/munge
@@ -47,6 +49,7 @@ services:
       args: *build_args
     image: slurm-ear-controller:${IMAGE_TAG}
     container_name: slurmctld
+    cpuset: "2"
     hostname: slurmctld
     volumes:
       - etc_munge:/etc/munge
@@ -54,7 +57,6 @@ services:
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - etc_ear:/etc/ear
-      - var_log_ear:/var/log/ear
     expose: ["6817"]
     networks: [slurm-network]
 
@@ -67,14 +69,14 @@ services:
     hostname: c1
     container_name: c1
     privileged: true
-    cpuset: "0,1"
+    cpuset: "4,5"
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - etc_ear:/etc/ear
-      - var_log_ear:/var/log/ear
+      - var_log_ear_c1:/var/ear
     expose: ["6818", "5000"]
     networks: [slurm-network]
 
@@ -86,19 +88,18 @@ services:
     image: slurm-ear-node:${IMAGE_TAG}
     hostname: c2
     container_name: c2
-    cpuset: "2,3"
-    privileged: false
+    cpuset: "6,7"
+    privileged: true
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - etc_ear:/etc/ear
-      - var_log_ear:/var/log/ear
+      - var_log_ear_c2:/var/ear
     expose: ["6818", "5000"]
     networks: [slurm-network]
 
-  # EAR database manager
   eardbd:
     build:
       context: .
@@ -106,14 +107,14 @@ services:
       args: *build_args
     image: slurm-ear-eardbd:${IMAGE_TAG}
     container_name: eardbd
+    cpuset: "3"
     hostname: eardbd
     volumes:
       - etc_ear:/etc/ear
-      - var_log_ear:/var/log/ear
-    expose: ["4711"]
+      - var_log_ear_dbd:/var/ear
+    expose: ["4711", "4712", "4713"]
     networks: [slurm-network]
 
-  # EAR global manager
   eargm:
     build:
       context: .
@@ -121,10 +122,11 @@ services:
       args: *build_args
     image: slurm-ear-eargm:${IMAGE_TAG}
     container_name: eargm
+    cpuset: "3"
     hostname: eargm
     volumes:
       - etc_ear:/etc/ear
-      - var_log_ear:/var/log/ear
+      - var_log_ear_gm:/var/ear
     expose: ["50000"]
     networks: [slurm-network]
 
@@ -135,7 +137,11 @@ volumes:
   var_lib_mysql:
   var_log_slurm:
   etc_ear:
-  var_log_ear:
+  var_log_ear_c1:
+  var_log_ear_c2:
+  var_log_ear_gm:
+  var_log_ear_dbd:
+
 
 networks:
   slurm-network:
