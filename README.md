@@ -1,6 +1,6 @@
 # ear-docker
 
-A containerised SLURM cluster for evaluating the [Energy-Aware Runtime (EAR 3.2)](https://github.com/eas4dc/EAR), developed jointly by the Barcelona Supercomputing Centre (BSC) and Lenovo.
+A containerised SLURM cluster for evaluating the [Energy-Aware Runtime (EAR 3.2)](https://github.com/eas4dc/EAR).
 
 This repository was produced during a three-month internship (September–November 2025) at the **College of Computing, Université Mohammed VI Polytechnique (UM6P)**, under the supervision of **Prof. Dr. Robert Basmadjian**, Head of the Toubkal Supercomputer.
 
