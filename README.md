@@ -77,7 +77,7 @@ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
 # Expected output: acpi-cpufreq
 ```
 
-### 2. CPU pinning (optional but recommended)
+### 2. CPU pinning (optional)
 
 Isolate cores 1–7 for the containers, leaving core 0 for the kernel:
 
